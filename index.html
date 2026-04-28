@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
@@ -1178,6 +1179,50 @@ const state = {
   statsTab: 'month'
 };
 
+// ─── localStorage Persistence ─────────────────────
+const STORAGE_KEY = 'spendly_expenses';
+const CUSTOM_CAT_KEY = 'spendly_custom_categories';
+
+function saveExpenses() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.expenses));
+  } catch(e) { console.warn('Save failed:', e); }
+}
+
+function loadExpenses() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Rehydrate date strings back to Date objects
+      state.expenses = parsed.map(e => ({
+        ...e,
+        date: new Date(e.date),
+        createdAt: new Date(e.createdAt)
+      }));
+    }
+  } catch(e) { console.warn('Load failed:', e); state.expenses = []; }
+}
+
+function saveCustomCategories() {
+  try {
+    const custom = CATEGORIES.filter(c => c.id.startsWith('custom_'));
+    localStorage.setItem(CUSTOM_CAT_KEY, JSON.stringify(custom));
+  } catch(e) {}
+}
+
+function loadCustomCategories() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_CAT_KEY);
+    if (raw) {
+      const custom = JSON.parse(raw);
+      custom.forEach(c => {
+        if (!CATEGORIES.find(x => x.id === c.id)) CATEGORIES.push(c);
+      });
+    }
+  } catch(e) {}
+}
+
 // ─── Categories ───────────────────────────────────
 const CATEGORIES = [
   { id: 'food',        label: 'Food',        emoji: '🍔', color: '#f97316' },
@@ -1193,6 +1238,10 @@ const CATEGORIES = [
   { id: 'entertainment', label: 'Fun',       emoji: '🎬', color: '#ec4899' },
   { id: 'other',       label: 'Other',       emoji: '💳', color: '#8b5cf6' },
 ];
+
+// ─── Load persisted data ─────────────────────────
+loadCustomCategories();
+loadExpenses();
 
 // ─── Dark Mode ────────────────────────────────────
 const html = document.documentElement;
@@ -1330,6 +1379,7 @@ function confirmExpense() {
   amountEl.value = '';
   document.getElementById('note-input').value = '';
   updateConfirmBtn();
+  saveExpenses();
   renderCategories();
   showToast('✅ Expense added!');
 }
@@ -1659,6 +1709,7 @@ function saveNewCategory() {
   if (!name) return;
   const id = 'custom_' + Date.now();
   CATEGORIES.push({ id, label: name, emoji: newCatState.emoji, color: newCatState.color });
+  saveCustomCategories();
   renderCategories();
   closeNewCatModal();
   showToast('✅ Category "' + name + '" added!');
@@ -1745,6 +1796,7 @@ function saveEdit() {
   // Re-sort by date desc
   state.expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+  saveExpenses();
   closeEditSheet();
   renderActivity();
   if (state.currentPage === 'stats') renderStats();
@@ -1761,6 +1813,7 @@ function cancelDelete() {
 
 function executeDelete() {
   state.expenses = state.expenses.filter(e => e.id !== editingId);
+  saveExpenses();
   cancelDelete();
   closeEditSheet();
   renderActivity();
