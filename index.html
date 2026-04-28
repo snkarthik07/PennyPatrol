@@ -1197,7 +1197,7 @@ function loadExpenses() {
       // Rehydrate date strings back to Date objects
       state.expenses = parsed.map(e => ({
         ...e,
-        date: new Date(e.date),
+        date: (() => { const d = new Date(e.date); return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0); })(),
         createdAt: new Date(e.createdAt)
       }));
     }
@@ -1369,7 +1369,7 @@ function confirmExpense() {
     categoryEmoji: cat.emoji,
     categoryColor: cat.color,
     note: note || '',
-    date: new Date(state.selectedDate),
+    date: new Date(state.selectedDate.getFullYear(), state.selectedDate.getMonth(), state.selectedDate.getDate(), 12, 0, 0),
     createdAt: new Date()
   });
 
